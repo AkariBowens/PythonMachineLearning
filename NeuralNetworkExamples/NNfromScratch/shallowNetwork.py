@@ -4,38 +4,38 @@ import matplotlib.pyplot as plt
 def sigmoid(z):
     return 1.0/ (1 + np.exp(-z))
 
-z = np.linspace(-8, 8, 1000)
-y = sigmoid(z)
-plt.plot(z, y)
-plt.xlabel('z')
-plt.ylabel('y(z)')
-plt.title('logistic')
-plt.grid()
-plt.show()
+# z = np.linspace(-8, 8, 1000)
+# y = sigmoid(z)
+# plt.plot(z, y)
+# plt.xlabel('z')
+# plt.ylabel('y(z)')
+# plt.title('logistic')
+# plt.grid()
+# plt.show()
 
 def tanh(z):
     return (np.exp(z) - np.exp(-z)) / (np.exp(z) + np.exp(-z))
 
-z = np.linspace(-8, 8, 1000)
-y = tanh(z)
-plt.plot(z, y)
-plt.xlabel('z')
-plt.ylabel('y(z)')
-plt.title('tanh')
-plt.grid()
-plt.show()
+# z = np.linspace(-8, 8, 1000)
+# y = tanh(z)
+# plt.plot(z, y)
+# plt.xlabel('z')
+# plt.ylabel('y(z)')
+# plt.title('tanh')
+# plt.grid()
+# plt.show()
 
 def relu(z):
     return np.maximum(np.zeros_like(z), z)
 
-z = np.linspace(-8, 8, 1000)
-y = relu(z)
-plt.plot(z, y)
-plt.xlabel('z')
-plt.ylabel('y(z)')
-plt.title('relu')
-plt.grid()
-plt.show()
+# z = np.linspace(-8, 8, 1000)
+# y = relu(z)
+# plt.plot(z, y)
+# plt.xlabel('z')
+# plt.ylabel('y(z)')
+# plt.title('relu')
+# plt.grid()
+# plt.show()
 
 
 def sigmoid_derivative(z):
@@ -66,6 +66,7 @@ def train(X, y, n_hidden, learning_rate, n_iter):
         W1 = W1 - learning_rate * dW1 / m
         b1 = b1 - learning_rate * db1 / m
         ##
+        # Prints out loss and MSE every 100 iterations
         if i % 100 == 0:
             cost = np.mean((y - A3) ** 2)
             print('Iteration %i, training loss: %f' %(i,cost))
@@ -110,3 +111,80 @@ predictions = predict(X_test, model)
 print(predictions[:, 0])
 
 print(y_test)
+
+
+## Neural Networks w/ scikit-learn
+# MLP - Multi-layer perceptron(NN nickname)
+
+from sklearn.neural_network import MLPRegressor
+
+# Creates two hidden layers w/ 16 and 8 nodes, respectiveley
+nn_scikit = MLPRegressor(hidden_layer_sizes=(16, 8), activation='relu', solver='adam', learning_rate_init=00.1, random_state=42, max_iter=2000)
+
+# Fit NN model on training set, predict on testing
+nn_scikit.fit(X_train, y_train.ravel())
+predictions = nn_scikit.predict(X_test)
+print(predictions)
+
+# Calculate MSE on prediction
+
+from sklearn.metrics import mean_squared_error
+print(mean_squared_error(y_test, predictions))
+
+
+## Implementing NNs w/ TensorFlow
+# Initiating a deep neural network w/ Keras
+
+import tensorflow as tf
+from tensorflow import keras
+
+tf.random.set_seed(42)
+
+model = keras.Sequential([keras.layers.Dense(units=16, activation='relu'), keras.layers.Dense(units=8, activation='relu'), keras.layers.Dense(units=1)])
+
+model.compile(loss='mean_squared_error', optimizer=tf.keras.optimizers.Adam(0.01))
+
+model.fit(X_train, y_train, epochs=300)
+
+predictions=model.predict(X_test)[:, 0]
+print(f"{predictions} - Tflow")
+
+print(mean_squared_error(y_test, predictions))
+
+## Implementing NNs w/ PyTorch
+
+import torch
+import torch.nn as nn
+
+torch.manual_seed(42)
+
+model = nn.Sequential(nn.Linear(X_train.shape[1], 16), nn.ReLU(), nn.Linear(16, 8), nn.ReLU(), nn.Linear(8,1))
+
+loss_function = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+
+# Create tensor objects from numpy before use in PyTorch
+X_train_torch = torch.from_numpy(X_train.astype(np.float32))
+y_train_torch = torch.from_numpy(y_train.astype(np.float32))
+
+def train_step(model, X_train, y_train, loss_function, optimizer):
+    pred_train = model(X_train)
+    loss = loss_function(pred_train, y_train)
+
+    model.zero_grad()
+    loss.backward()
+    optimizer.step()
+    return loss.item()
+
+for epoch in range(500):
+    loss = train_step(model, X_train_torch, y_train_torch, loss_function, optimizer)
+
+    if epoch % 100 == 0:
+        print(f"Epoch {epoch} - loss: {loss}")
+
+
+X_test_torch = torch.from_numpy(X_test.astype(np.float32))
+
+predictions = model(X_test_torch).detach().numpy()[:, 0]
+print(predictions)
+print(mean_squared_error(y_test, predictions))
