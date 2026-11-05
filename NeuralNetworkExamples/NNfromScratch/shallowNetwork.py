@@ -135,21 +135,21 @@ print(mean_squared_error(y_test, predictions))
 ## Implementing NNs w/ TensorFlow
 # Initiating a deep neural network w/ Keras
 
-import tensorflow as tf
-from tensorflow import keras
+# import tensorflow as tf
+# from tensorflow import keras
 
-tf.random.set_seed(42)
+# tf.random.set_seed(42)
 
-model = keras.Sequential([keras.layers.Dense(units=16, activation='relu'), keras.layers.Dense(units=8, activation='relu'), keras.layers.Dense(units=1)])
+# model = keras.Sequential([keras.layers.Dense(units=16, activation='relu'), keras.layers.Dense(units=8, activation='relu'), keras.layers.Dense(units=1)])
 
-model.compile(loss='mean_squared_error', optimizer=tf.keras.optimizers.Adam(0.01))
+# model.compile(loss='mean_squared_error', optimizer=tf.keras.optimizers.Adam(0.01))
 
-model.fit(X_train, y_train, epochs=300)
+# model.fit(X_train, y_train, epochs=300)
 
-predictions=model.predict(X_test)[:, 0]
-print(f"{predictions} - Tflow")
+# predictions=model.predict(X_test)[:, 0]
+# print(f"{predictions} - Tflow")
 
-print(mean_squared_error(y_test, predictions))
+# print(mean_squared_error(y_test, predictions))
 
 ## Implementing NNs w/ PyTorch
 
@@ -188,3 +188,44 @@ X_test_torch = torch.from_numpy(X_test.astype(np.float32))
 predictions = model(X_test_torch).detach().numpy()[:, 0]
 print(predictions)
 print(mean_squared_error(y_test, predictions))
+
+## An example of adding a dropout layer in pytorch
+# model_with_dropout = nn.Sequential(nn.Linear(X_train.shape[1], 16), nn.ReLU(), nn.Dropout(0.1), nn.Linear(16, 8), nn.ReLU(), nn.Linear(8,1))
+
+# optimizer = torch.optim.Adam(model_with_dropout.parameters(), lr=0.01)
+
+# for epoch in range(1000):
+#     loss = train_step(model_with_dropout, X_train_torch, y_train_torch, loss_function, optimizer)
+
+#     if epoch % 100 == 0:
+#         print(f"Epoch {epoch} - loss: {loss}")
+
+# model_with_dropout.eval()
+# predictions = model_with_dropout (X_test_torch).detach().numpy()[:,0]
+# print(mean_squared_error(y_test, predictions))
+
+## Example of Early Stopping
+
+model = nn.Sequential(nn.Linear(X_train.shape[1], 16), nn.ReLU(), nn.Linear(16, 8), nn.ReLU(), nn.Linear(8,1))
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+
+# Stopping criteria, if test loss doesn't improve after {patience}
+patience = 100
+epochs_no_improve = 0
+best_test_loss = float('inf')
+
+import copy
+best_model = model
+for epoch in range(500):
+    loss = train_step(model, X_train_torch, y_train_torch, loss_function, optimizer)
+    predictions = model(X_test_torch).detach().numpy()[:,0]
+    test_loss = mean_squared_error(y_test, predictions)
+    if test_loss > best_test_loss:
+        epochs_no_improve +=1
+        if epochs_no_improve > patience:
+            print(f"Early stopped at epcoh {epoch}")
+            break
+        else:
+            epochs_no_improve = 0
+            best_test_loss = test_loss
+            best_model = copy.deepcopy(model)
