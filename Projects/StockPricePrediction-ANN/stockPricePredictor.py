@@ -1,7 +1,6 @@
 import pandas as pd
 import torch
 import numpy as np
-import torch
 import torch.nn as nn
 import sklearn
 
@@ -131,3 +130,86 @@ print(f'MAE: {mean_absolute_error(y_test, predictions):.3f}')
 print(f'R^2: {r2_score(y_test, predictions):.3f}')
 
 ## Fine Tuning in PyTorch
+
+from torch.utils.tensorboard import SummaryWriter
+
+# Setting hyperparameters
+hparams_config = {
+    "hidden_size": [16,32],
+    "epochs": [1000, 3000],
+    "lr": [0.1, 0.3],
+}
+
+def train_validate_model(hidden_size, epoch, lr):
+    model = nn.Sequential(nn.Linear(X_train.shape[1], hidden_size), nn.ReLU(), nn.Linear(hidden_size, 1))
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+    writer_path = f"runs/{experiment_num}/{hidden_size}/{epochs}\{lr}"
+    writer = SummaryWriter(log_dir=writer_path)
+    for epoch in range(epochs):
+        loss = train_step(model, X_train_torch, y_train_torch, loss_function, optimizer)
+        predictions = model(X_test_torch).detach().numpy()[:, 0]
+        test_mse = mean_squared_error(y_test, predictions)
+        writer.add_scalar(
+            tag="train loss",
+            scalar_value=loss,
+            global_step=epoch,
+        )
+
+        writer.add_scalar(
+            tag="test loss",
+            scalar_value=test_mse,
+            global_step=epoch,
+        )
+
+    test_r2 = r2_score(y_test, predictions)
+    print(f'R^2: {test_r2:.3f}\n')
+
+    # Adding params to tensorboard
+
+    writer.add_hparams(
+        {
+            "hidden_size": hidden_size,
+            "epochs": epochs,
+            "lr": lr,
+        },
+        {
+            "test MSE": test_mse,
+            "test R^2": test_r2,
+        },
+    )
+
+torch.manual_seed(42)
+experiment_num = 0
+for hidden_size in hparams_config["hidden_size"]:
+    for epochs in hparams_config["epochs"]:
+        for lr in hparams_config["lr"]:
+            experiment_num += 1
+            print(f"Experiment {experiment_num}: hidden_size = {hidden_size}, epochs = {epochs}, lr = {lr}")
+            train_validate_model(hidden_size, epochs, lr)
+
+# Using the optimal model to make predictions
+
+hidden_size = 16
+epochs = 3000
+lr = 0.3
+
+best_model = model = nn.Sequential(nn.Linear(X_train.shape[1], hidden_size), nn.ReLU(), nn.Linear(hidden_size, 1))
+optimizer = torch.optim.Adam(best_model.parameters(), lr=lr)
+
+for epoch in range(epochs):
+    train_step(best_model, X_train_torch, y_train_torch, loss_function, optimizer)
+
+predictions = best_model(X_test_torch).detach().numpy()[:, 0]
+
+import matplotlib.pyplot as plt
+
+plt.rc('xtick', labelsize=10)
+plt.rc('ytick', labelsize=10)
+plt.plot(data_test.index, y_test, c='k')
+plt.plot(data_test.index, predictions, c='b')
+plt.xticks(range(0, 130, 10), rotation=60)
+plt.xlabel('Date', fontsize=10)
+plt.ylabel('Close price', fontsize=10)
+plt.legend(['Truth', 'Neural network'], fontsize=10)
+plt.show()
